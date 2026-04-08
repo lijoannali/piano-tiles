@@ -37,16 +37,35 @@ uint8_t test_packet[] = {0xAA, 0x55, 0xFF, 0x00};
 uint8_t message_len = 4;
 
 //Test SPI message!
-#define red1 0b11011011
-#define red2 0b01101101
-#define red3 0b10110110
 
 // red = 110 110 110 110 110 110 110 110
 // = 11011011 01101101 10110110
 
 // this array has 6 red RGB codes, each red code is the sequence: red1,red2,red3
-uint8_t red[] = {red1, red2, red3, red1, red2, red3, red1, red2, red3, red1, red2, red3, red1, red2, red3, red1, red2, red3};
+// uint8_t red[] = {red1, red2, red3, red1, red2, red3, red1, red2, red3, red1, red2, red3, red1, red2, red3, red1, red2, red3};
+// uint8_t red_length = sizeof(red)/sizeof(red[0]); 
+#define red1 0b11011011
+#define red2 0b01101101
+#define red3 0b10110110
+#define zero1 0b10010010
+#define zero2 0b01001001
+#define zero3 0b00100100
+#define reset 0b00000000
+
+// red = 110 110 110 110 110 110 110 110
+// = 11011011 01101101 10110110
+
+// this array has 6 red RGB codes, each red code is the sequence: zero1, zero2, zero3, red1, red2, red3, zero1, zero2, zero3
+uint8_t red[] = {
+    zero1, zero2, zero3, red1, red2, red3, zero1, zero2, zero3,
+    zero1, zero2, zero3, red1, red2, red3, zero1, zero2, zero3,
+    zero1, zero2, zero3, red1, red2, red3, zero1, zero2, zero3,
+    zero1, zero2, zero3, red1, red2, red3, zero1, zero2, zero3,
+    zero1, zero2, zero3, red1, red2, red3, zero1, zero2, zero3,
+    zero1, zero2, zero3, red1, red2, red3, zero1, zero2, zero3
+};
 uint8_t red_length = sizeof(red)/sizeof(red[0]); 
+
 
 int main(void) {
     InitializeLEDInterface();
@@ -62,7 +81,7 @@ int main(void) {
     GPIOB->DOUT31_0 |= (1 << 15);
 
     while (1) {
-        while (!SendSPIMessage(red, red_length)) {
+        while (!SendSPIMessage(red, 27)) {
             // wait for previous to finish
         }
         delay_cycles(1000000); // gap between bursts
