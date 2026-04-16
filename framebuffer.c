@@ -48,15 +48,45 @@ void FlushFramebuffer(void) {
     SendSPIMessage(tx_buffer, TX_BUFFER_SIZE);
 }
 
+//Turn off all LEDs
 void ClearFramebuffer(void) {
-    for (int i = 0; i < 64; i++) framebuffer[i] = 0;
+    memset(framebuffer, 0, FRAMEBUFFER_BYTES);
 }
+
+//Draw 1 row of LEDs
 void DrawRow(int row, uint8_t color) {
-    for (int col = 0; col < 16; col++) {
-        int bit_idx = (row * 16 + col) * 2;
+    for (int col = 0; col < NUM_LED_COLS; col++) {
+        int bit_idx = (row * NUM_LED_ROWS + col) * BUFFER_BITS_PER_LED;
         int byte_idx = bit_idx / 8;
         int shift = bit_idx % 8;
-        framebuffer[byte_idx] &= ~(0x03 << shift);
-        framebuffer[byte_idx] |=  (color & 0x03) << shift;
+        framebuffer[byte_idx] &= ~(GET_LAST_TWO_BITS << shift); //Clear bits being drawn
+        framebuffer[byte_idx] |=  (color & GET_LAST_TWO_BITS) << shift; //Write the color
     }
 }
+
+//Draw a line segment of LEDs
+void DrawVerticalSegment(int row, uint8_t color, int start_idx, int length) {
+    //Clear existing colors
+    int row_start_byte = row * NUM_BYTES_PER_ROW;
+    memset(&framebuffer[row_start_byte], 0, NUM_BYTES_PER_ROW);
+    //Draw new color to segment
+    length = (start_idx < 0) ? length + start_idx : length;
+    start_idx = (start_idx < 0) ? 0 : start_idx;
+    if (length <= 0) return; //Segment too far up to be visible
+    int end_idx = ((start_idx + length) > NUM_LED_COLS) ? (NUM_LED_COLS):(start_idx + length);
+    for (int col = start_idx; col < end_idx; col++) {
+        int physical_col = (row % 2 == 1) ? (NUM_LED_COLS - (col+1)) : col; ////Flip column indexing for odd-numbered rows
+        int bit_idx = (row * NUM_LED_ROWS + physical_col) * BUFFER_BITS_PER_LED;
+        int byte_idx = bit_idx / 8;
+        int shift = bit_idx % 8;
+        framebuffer[byte_idx] &= ~(GET_LAST_TWO_BITS << shift); //Clear bits being drawn
+        framebuffer[byte_idx] |=  (color & GET_LAST_TWO_BITS) << shift; //Write the color
+    }
+}
+
+void DrawRectangle(int x, int y, int h, int w, uint8_t color) {
+    for (int row = x; row < (x + w); row++) {
+        DrawVerticalSegment(row, color, y, h);
+    }
+}
+
