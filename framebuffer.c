@@ -1,14 +1,18 @@
 #include "framebuffer.h"
 #include "leds.h"
+#include "string.h"
 
 #define GET_LAST_TWO_BITS 0x03
 #define WS2812B_RESET 0x00
-#define NUM_LEDS 256
-#define BUFFER_BITS_PER_LED_SPI 2
+#define NUM_LED_COLS 16
+#define NUM_LED_ROWS 16
+#define NUM_LEDS  (NUM_LED_COLS * NUM_LED_ROWS)
+#define NUM_BYTES_PER_ROW (NUM_LED_COLS * BUFFER_BITS_PER_LED) / 8
+#define BUFFER_BITS_PER_LED 2
 #define BYTES_PER_LED_SPI       9
 #define NUM_SPI_RESET_BYTES     2
 #define TX_BUFFER_SIZE          (NUM_LEDS * BYTES_PER_LED_SPI + NUM_SPI_RESET_BYTES)
-#define FRAMEBUFFER_BYTES       (NUM_LEDS * BUFFER_BITS_PER_LED_SPI / 8)  // 2 bits per LED
+#define FRAMEBUFFER_BYTES       (NUM_LEDS * BUFFER_BITS_PER_LED / 8)  // 2 bits per LED
 
 // 256 pixels x 2 bits--> 512 bits = 64 bytes
 static uint8_t framebuffer[FRAMEBUFFER_BYTES];
