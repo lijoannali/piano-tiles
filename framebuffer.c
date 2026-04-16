@@ -21,17 +21,25 @@ static uint8_t tx_buffer[TX_BUFFER_SIZE];
 //Defined color sequences for a single LED:
 static const uint8_t SPI_OFF[]     = {0x92,0x49,0x24,0x92,0x49,0x24,0x92,0x49,0x24}; // G, R, B = 0
 static const uint8_t SPI_DIM_RED[] = {0x92,0x49,0x24,0x92,0x4D,0x34,0x92,0x49,0x24}; // R=dim, G=0, B=0
+static const uint8_t SPI_DIM_GREEN[] = {0x92,0x4D,0x34,0x92,0x49,0x24,0x92,0x49,0x24}; // G=dim, R=0, B=0
+static const uint8_t SPI_DIM_BLUE[]  = {0x92,0x49,0x24,0x92,0x49,0x24,0x92,0x4D,0x34}; // G=0, R=0, B=dim
 
 //Sends out SPI message
 void FlushFramebuffer(void) {
     int tx_idx = 0;
     for (int i = 0; i < NUM_LEDS; i++) {
-        int bit_idx = i * BUFFER_BITS_PER_LED_SPI;
+        int bit_idx = i * BUFFER_BITS_PER_LED;
         int byte_idx = bit_idx / 8;
         int shift_to_lsb = bit_idx % 8;
         uint8_t color = (framebuffer[byte_idx] >> (shift_to_lsb)) & GET_LAST_TWO_BITS;
         //Write the 9-byte SPI bytes for LED's color to tx_buffer
-        const uint8_t *led_color_SPI_bytes = (color == COLOR_DIM_RED) ? SPI_DIM_RED : SPI_OFF;
+        const uint8_t *led_color_SPI_bytes;
+        switch(color) {
+            case COLOR_DIM_RED:   led_color_SPI_bytes = SPI_DIM_RED;   break;
+            case COLOR_DIM_GREEN: led_color_SPI_bytes = SPI_DIM_GREEN; break;
+            case COLOR_DIM_BLUE:  led_color_SPI_bytes = SPI_DIM_BLUE;  break;
+            default:              led_color_SPI_bytes = SPI_OFF;        break;
+        }
         for (int j = 0; j < 9; j++) tx_buffer[tx_idx++] = led_color_SPI_bytes[j];
     }
     //Include reset message
