@@ -3,17 +3,15 @@
 #include "timing.h"
 #include "leds.h"
 #include "framebuffer.h"
+#include "game.h"
 
-int main(void)
-{
-    int cycle  = 0;
+#define SW1 ((uint32_t) 0x1 << 24)  // PA24
+#define SW2 ((uint32_t) 0x1 << 25)  // PA25
+#define SW3 ((uint32_t) 0x1 << 26)  // PA26
+#define SW4 ((uint32_t) 0x1 << 27)  // PA27
 
-    InitializeLEDInterface();
-    InitializeTimerG0();
-
+void InitButtonGPIO(void) {
     if (GPIOA->GPRCM.STAT & GPIO_STAT_RESETSTKY_MASK) {
-        // Sticky bit is set  so module was reset (or never initialized)
-        // Do full reset sequence and clear the sticky bit
         GPIOA->GPRCM.RSTCTL = (GPIO_RSTCTL_KEY_UNLOCK_W |
                                 GPIO_RSTCTL_RESETSTKYCLR_CLR |
                                 GPIO_RSTCTL_RESETASSERT_ASSERT);
@@ -21,30 +19,38 @@ int main(void)
                                 GPIO_PWREN_ENABLE_ENABLE);
         delay_cycles(POWER_STARTUP_DELAY);
     }
+    const uint32_t cfg = IOMUX_PINCM_PC_CONNECTED |
+                         IOMUX_PINCM_INENA_ENABLE  |
+                         ((uint32_t) 0x00000001)   |
+                         IOMUX_PINCM_PIPU_ENABLE   |
+                         IOMUX_PINCM_PIPD_DISABLE;
 
-    IOMUX->SECCFG.PINCM[(IOMUX_PINCM1)] = IOMUX_PINCM_PC_CONNECTED | 1;  // LED GPIO
-    GPIOA->DOUT31_0 = 1;
-    GPIOA->DOE31_0 = 1;
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM54] = cfg;  // PA24
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM55] = cfg;  // PA25
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM59] = cfg;  // PA26
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM60] = cfg;  // PA27
+    delay_cycles(POWER_STARTUP_DELAY);
+}
 
-    // let the buzzer run for 0.1 s just so we know it's there!
+int main(void) {
+    InitializeLEDInterface();
+    InitializeTimerG0();
+    InitButtonGPIO();
+
     delay_cycles(1600000);
 
-    SetTimerG0Delay(10000); // 20 ticks at 32 kHz is 0.6 ms
+    SetTimerG0Delay(983);  // LFCLK=32768Hz → ~30ms per tick
     EnableTimerG0();
 
-    // VERY BASIC LOOP - If button 1 signals a 0, enable the PWM
-    int row = 2;
-    int start_col = -7;
+    game_state_t state = InitGame();
+
     while (1) {
         if (timer_wakeup) {
-            ClearFramebuffer();
-            DrawRectangle(7, (start_col++)%16, 3,2, COLOR_DIM_RED);
-            DrawRectangle(3, (start_col++)%16, 3,2, COLOR_DIM_GREEN);
-//            DrawRectangle(10, (start_col++)%16, 3,2, COLOR_DIM_BLUE);
-            FlushFramebuffer();
-            timer_wakeup = 0;
+            timer_wakeup = false;
+            uint32_t input = GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4);
+            state = UpdateGame(state, input);
+            RenderGame(state);
         }
-        __WFI(); // Go to sleep until timer counts down again.
+        __WFI();
     }
-
 }
