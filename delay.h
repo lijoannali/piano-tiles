@@ -1,33 +1,10 @@
-/* 
- * This file contains the declarations for for common functions that
- * we will use in ELEC327. See LICENSE file for details on licensing.
-*/
-
 #ifndef delay_include
 #define delay_include
 
-#include <ti/devices/msp/msp.h>
+#include <stdint.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-/**
- * @brief   Writes value to specified register - retaining bits unaffected by mask.
- *
- * @param[in] reg     Pointer to the register overlay for the peripheral.
- * @param[in] val     Value to be written to the register.
- * @param[in] mask    Mask defines which bits will be altered.
- */
-__STATIC_INLINE void update_reg(
-    volatile uint32_t *reg, uint32_t val, uint32_t mask)
-{
-    uint32_t tmp;
-
-    tmp  = *reg;
-    tmp  = tmp & ~mask;
-    *reg = tmp | (val & mask);
-}
+#define POWER_STARTUP_DELAY (16)
 
 /**
  * @brief   Consumes the number of CPU cycles specified.
@@ -51,19 +28,22 @@ __STATIC_INLINE void update_reg(
  */
 void delay_cycles(uint32_t cycles);
 
-#ifdef __cplusplus
-}
-#endif
 
-#endif /* delay_include */
+
+#endif // delay_include
+
+
+
 
 /*
  *
- * This code is derived from standard TI "driverlib" code from dl_common.h /.c
-
-
+ * The delay function is a reproduction of standard TI code
  * Copyright (c) 2020, Texas Instruments Incorporated
  * All rights reserved.
+ *
+ * All other code is Copyright (c) 2026, Caleb Kemere
+ * All rights reserved, see LICENSE.md
+
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -91,4 +71,5 @@ void delay_cycles(uint32_t cycles);
  * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
  */

@@ -85,6 +85,7 @@ void DrawVerticalSegment(int row, uint8_t color, int start_idx, int length) {
 }
 
 void DrawRectangle(int x, int y, int h, int w, uint8_t color) {
+    //Draw segment over multiple rows to create rectangle
     for (int row = x; row < (x + w); row++) {
         DrawVerticalSegment(row, color, y, h);
     }
