@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define POWER_STARTUP_DELAY 16
 #define DEBOUNCE_TICKS 5
 
 extern bool timer_wakeup;

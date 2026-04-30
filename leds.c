@@ -18,20 +18,30 @@ bool     spi_transmission_in_progress;
 void InitializeLEDInterface(void) {
     // 1. Initialize GPIO IOMUX for SPI
     // Check if module needs full initialization
-    if (GPIOB->GPRCM.STAT & GPIO_STAT_RESETSTKY_MASK) {
+    // if (GPIOB->GPRCM.STAT & GPIO_STAT_RESETSTKY_MASK) {
+    //     // Sticky bit is set so module was reset (or never initialized)
+    //     // Do full reset sequence and clear the sticky bit
+    //     GPIOB->GPRCM.RSTCTL = (GPIO_RSTCTL_KEY_UNLOCK_W |
+    //                             GPIO_RSTCTL_RESETSTKYCLR_CLR |
+    //                             GPIO_RSTCTL_RESETASSERT_ASSERT);
+    //     GPIOB->GPRCM.PWREN  = (GPIO_PWREN_KEY_UNLOCK_W |
+    //                             GPIO_PWREN_ENABLE_ENABLE);
+    //     delay_cycles(POWER_STARTUP_DELAY);
+    // } 
+    //Check if module needs full initialization
+    if (GPIOA->GPRCM.STAT & GPIO_STAT_RESETSTKY_MASK) {
         // Sticky bit is set so module was reset (or never initialized)
         // Do full reset sequence and clear the sticky bit
-        GPIOB->GPRCM.RSTCTL = (GPIO_RSTCTL_KEY_UNLOCK_W |
+        GPIOA->GPRCM.RSTCTL = (GPIO_RSTCTL_KEY_UNLOCK_W |
                                 GPIO_RSTCTL_RESETSTKYCLR_CLR |
                                 GPIO_RSTCTL_RESETASSERT_ASSERT);
-        GPIOB->GPRCM.PWREN  = (GPIO_PWREN_KEY_UNLOCK_W |
+        GPIOA->GPRCM.PWREN  = (GPIO_PWREN_KEY_UNLOCK_W |
                                 GPIO_PWREN_ENABLE_ENABLE);
         delay_cycles(POWER_STARTUP_DELAY);
-    } 
-
+    }
     // Initialize SPI0 connections!!
-    IOMUX->SECCFG.PINCM[(IOMUX_PINCM43)] = IOMUX_PINCM_PC_CONNECTED | IOMUX_PINCM43_PF_SPI0_PICO;  // SPI0_PCIO on PA9
-
+    //IOMUX->SECCFG.PINCM[(IOMUX_PINCM43)] = IOMUX_PINCM_PC_CONNECTED | IOMUX_PINCM43_PF_SPI0_PICO;  // SPI0_PCIO on PA9
+      IOMUX->SECCFG.PINCM[(IOMUX_PINCM20)] = IOMUX_PINCM_PC_CONNECTED | IOMUX_PINCM43_PF_SPI0_PICO;
 
     SPI0->GPRCM.RSTCTL = (SPI_RSTCTL_KEY_UNLOCK_W | SPI_RSTCTL_RESETSTKYCLR_CLR | SPI_RSTCTL_RESETASSERT_ASSERT);
     SPI0->GPRCM.PWREN = (SPI_PWREN_KEY_UNLOCK_W | SPI_PWREN_ENABLE_ENABLE);

@@ -48,6 +48,4 @@ void TIMG0_IRQHandler(void) {
     }
 }
 
-// The function needs to be put into the interrupt table!!!!
-
 

@@ -3,11 +3,10 @@
 #include "delay.h"
 #include <ti/devices/msp/msp.h>
 
-#define SW1 ((uint32_t) 0x1 << 24)  // PA24
-#define SW2 ((uint32_t) 0x1 << 25)  // PA25
-#define SW3 ((uint32_t) 0x1 << 26)  // PA26
-#define SW4 ((uint32_t) 0x1 << 27)  // PA27
-
+#define SW1 ((uint32_t) 0x1 << 23)  // PA24
+#define SW2 ((uint32_t) 0x1 << 24)  // PA25
+#define SW3 ((uint32_t) 0x1 << 25)  // PA26
+#define SW4 ((uint32_t) 0x1 << 26)  // PA27
 // 16 cols split into 4 lanes of 4 cols each.
 // Tile is 2 cols wide, centered in its lane.
 // Lane 0: cols 0-3,  tile at col 1
@@ -17,6 +16,7 @@
 static const int TILE_COL_START[4] = {1, 5, 9, 13};
 static const int TILE_COL_WIDTH    = 2;
 static const int TILE_ROW_HEIGHT   = 4;
+
 
 static const uint8_t TILE_COLOR[4] = {
     COLOR_DIM_RED,
@@ -42,16 +42,20 @@ game_state_t InitGame(void) {
     s.anim_counter = 0;
     s.next_col = 0;
     s.spawn_counter = 0;
-    for (int i = 0; i < NUM_LANES; i++) {
-        s.tiles[i].active = false;
-        s.tiles[i].state  = TILE_GONE;
-        s.tiles[i].row    = 0;
-        s.buttons[i].state = BTN_IDLE;
-        s.buttons[i].debounce_counter = 0;
-        s.buttons[i].just_became_held = false;
-        s.fall_counter[i] = 0;
-        s.hit_flash[i]    = 0;
-    }
+for (int i = 0; i < MAX_TILES; i++) {
+    s.tiles[i].active = false;
+    s.tiles[i].state  = TILE_GONE;
+    s.tiles[i].row    = 0;
+    s.tiles[i].lane   = 0;
+    s.fall_counter[i] = 0;
+}
+
+for (int i = 0; i < NUM_LANES; i++) {
+    s.buttons[i].state = BTN_IDLE;
+    s.buttons[i].debounce_counter = 0;
+    s.buttons[i].just_became_held = false;
+    s.hit_flash[i] = 0;
+}
     return s;
 }
 
@@ -75,10 +79,11 @@ static btn_t UpdateButton(btn_t btn, bool raw_pressed) {
     return b;
 }
 
-static tile_t SpawnTile(void) {
+static tile_t SpawnTile(int lane) {
     tile_t t;
     t.active = true;
     t.row    = -TILE_ROW_HEIGHT;
+    t.lane   = lane;
     t.state  = TILE_FALLING;
     return t;
 }
@@ -110,66 +115,116 @@ game_state_t UpdateGame(game_state_t s, uint32_t gpio_input) {
             if (any_btn_just_held) {
                 s.mode = MODE_PLAYING;
                 s.score = 0; s.misses = 0; s.spawn_counter = 0;
-                for (int i = 0; i < NUM_LANES; i++) {
-                    s.tiles[i].active = false;
-                    s.buttons[i].state = BTN_IDLE;
-                    s.buttons[i].debounce_counter = 0;
-                    s.fall_counter[i] = 0;
-                    s.hit_flash[i] = 0;
-                }
-                s.next_col = NextRand() % NUM_LANES;
-                s.tiles[s.next_col] = SpawnTile();
-                s.fall_counter[s.next_col] = 0;
+for (int i = 0; i < MAX_TILES; i++) {
+    s.tiles[i].active = false;
+    s.tiles[i].state = TILE_GONE;
+    s.tiles[i].row = 0;
+    s.tiles[i].lane = 0;
+    s.fall_counter[i] = 0;
+}
+
+for (int i = 0; i < NUM_LANES; i++) {
+    s.buttons[i].state = BTN_IDLE;
+    s.buttons[i].debounce_counter = 0;
+    s.buttons[i].just_became_held = false;
+    s.hit_flash[i] = 0;
+}
+               s.next_col = (NextRand() ^ s.tick) % NUM_LANES;
+                s.tiles[0] = SpawnTile(s.next_col);
+               s.fall_counter[0] = 0;
             }
             break;
 
-        case MODE_PLAYING: {
-            bool any_active = false;
-            for (int i = 0; i < NUM_LANES; i++)
-                if (s.tiles[i].active) any_active = true;
-
-            if (!any_active) {
-                s.spawn_counter++;
-                if (s.spawn_counter >= SPAWN_GAP) {
-                    s.next_col = NextRand() % NUM_LANES;
-                    s.tiles[s.next_col] = SpawnTile();
-                    s.fall_counter[s.next_col] = 0;
-                    s.spawn_counter = 0;
+case MODE_PLAYING: {
+    s.spawn_counter++;
+    
+    
+    if (s.spawn_counter >= SPAWN_GAP) {
+        int start_lane = NextRand() % NUM_LANES;
+        bool spawned = false;
+        for (int attempt = 0; attempt < NUM_LANES && !spawned; attempt++) {
+            int lane = (start_lane + attempt) % NUM_LANES;
+            bool lane_clear = true;
+            for (int j = 0; j < MAX_TILES; j++) {
+                if (s.tiles[j].active && s.tiles[j].lane == lane) {
+                    if (s.tiles[j].row < TILE_ROW_HEIGHT + 2) {
+                        lane_clear = false;
+                        break;
+                    }
                 }
             }
-
-            for (int i = 0; i < NUM_LANES; i++) {
-                if (!s.tiles[i].active) continue;
-
-                s.fall_counter[i]++;
-                if (s.fall_counter[i] >= FALL_SPEED) {
+            if (!lane_clear) continue;
+            for (int i = 0; i < MAX_TILES; i++) {
+                if (!s.tiles[i].active) {
+                    s.tiles[i] = SpawnTile(lane);
                     s.fall_counter[i] = 0;
-                    s.tiles[i].row++;
-                }
-
-                if (s.buttons[i].just_became_held) {
-                    s.hit_flash[i] = HIT_FLASH_TICKS;
-                    s.tiles[i].active = false;
-                    s.tiles[i].state  = TILE_GONE;
-                    s.score++;
-                    s.spawn_counter = 0;
-                    continue;
-                }
-
-                if (s.tiles[i].row >= MATRIX_ROWS) {
-                    s.misses++;
-                    s.tiles[i].active = false;
-                    s.tiles[i].state  = TILE_GONE;
-                    s.spawn_counter = 0;
+                    spawned = true;
+                    break;
                 }
             }
-
-            if (s.misses >= MISS_LIMIT) {
-                s.mode = MODE_LOSE_ANIM;
-                s.anim_counter = 0;
-            }
-            break;
         }
+        s.spawn_counter = 0;
+    }
+
+    
+    for (int i = 0; i < MAX_TILES; i++) {
+        if (!s.tiles[i].active) continue;
+
+        s.fall_counter[i]++;
+        if (s.fall_counter[i] >= FALL_SPEED) {
+            s.fall_counter[i] = 0;
+            s.tiles[i].row++;
+        }
+
+        
+        if (s.tiles[i].row >= MATRIX_ROWS) {
+            s.misses++;
+            s.tiles[i].active = false;
+            s.tiles[i].state = TILE_GONE;
+        }
+    }
+
+    
+    for (int l = 0; l < NUM_LANES; l++) {
+        
+        if (s.buttons[l].just_became_held) {
+            int target_idx = -1;
+            int max_row = -100;
+
+            
+            for (int i = 0; i < MAX_TILES; i++) {
+                if (s.tiles[i].active && s.tiles[i].lane == l) {
+                    if (s.tiles[i].row > max_row) {
+                        max_row = s.tiles[i].row;
+                        target_idx = i;
+                    }
+                }
+            }
+
+            
+if (target_idx != -1) {
+    int bottom = s.tiles[target_idx].row + TILE_ROW_HEIGHT - 1;
+
+    if (bottom >= MATRIX_ROWS - 3) {
+      
+        s.tiles[target_idx].active = false;
+        s.tiles[target_idx].state = TILE_GONE;
+        s.score++;
+        s.hit_flash[l] = HIT_FLASH_TICKS;
+    } else {
+        
+        s.misses++;
+    }
+}
+        }
+    }
+
+    if (s.misses >= MISS_LIMIT) {
+        s.mode = MODE_LOSE_ANIM;
+        s.anim_counter = 0;
+    }
+    break;
+}
 
         case MODE_WIN_ANIM:
         case MODE_LOSE_ANIM:
@@ -200,18 +255,26 @@ void RenderGame(game_state_t s) {
                                   TILE_ROW_HEIGHT, COLOR_DIM_GREEN);
                 }
             }
-            for (int i = 0; i < NUM_LANES; i++) {
-                if (!s.tiles[i].active) continue;
-                int top = s.tiles[i].row;
-                int bot = top + TILE_ROW_HEIGHT;
-                if (bot <= 0 || top >= MATRIX_ROWS) continue;
-                int draw_top = (top < 0) ? 0 : top;
-                int draw_h   = (bot > MATRIX_ROWS ? MATRIX_ROWS : bot) - draw_top;
-                DrawRectangle(draw_top, TILE_COL_START[i], TILE_COL_WIDTH, draw_h, TILE_COLOR[i]);
-            }
-            break;
-        }
+for (int i = 0; i < MAX_TILES; i++) {
+    if (!s.tiles[i].active) continue;
 
+    int lane = s.tiles[i].lane;
+    int top = s.tiles[i].row;
+    int bot = top + TILE_ROW_HEIGHT;
+
+    if (bot <= 0 || top >= MATRIX_ROWS) continue;
+
+    int draw_top = (top < 0) ? 0 : top;
+    int draw_h = (bot > MATRIX_ROWS ? MATRIX_ROWS : bot) - draw_top;
+
+    DrawRectangle(draw_top,
+                  TILE_COL_START[lane],
+                  TILE_COL_WIDTH,
+                  draw_h,
+                  TILE_COLOR[lane]);
+}
+break; 
+        }
         case MODE_WIN_ANIM:
             if ((s.anim_counter / 8) % 2 == 0)
                 for (int r = 0; r < MATRIX_ROWS; r++) DrawRow(r, COLOR_DIM_GREEN);

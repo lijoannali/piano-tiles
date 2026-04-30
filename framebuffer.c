@@ -90,4 +90,3 @@ void DrawRectangle(int x, int y, int h, int w, uint8_t color) {
         DrawVerticalSegment(row, color, y, h);
     }
 }
-

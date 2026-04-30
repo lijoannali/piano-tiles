@@ -11,13 +11,15 @@
 #define FALL_SPEED       8
 #define SPAWN_GAP       30
 #define DEBOUNCE_LIMIT   1
+#define MAX_TILES 12
 
 typedef enum { TILE_FALLING, TILE_AT_BOTTOM, TILE_GONE } tile_state_t;
 
 typedef struct {
+    bool active;
+    int row;
+    int lane;
     tile_state_t state;
-    int          row;
-    bool         active;
 } tile_t;
 
 typedef enum { BTN_IDLE, BTN_DEBOUNCING, BTN_HELD } btn_state_t;
@@ -32,12 +34,12 @@ typedef enum { MODE_STARTUP_ANIM, MODE_PLAYING, MODE_WIN_ANIM, MODE_LOSE_ANIM } 
 
 typedef struct {
     game_mode_t  mode;
-    tile_t       tiles[NUM_LANES];
+    tile_t       tiles[MAX_TILES];
     btn_t        buttons[NUM_LANES];
     int          score;
     int          misses;
     uint32_t     tick;
-    uint32_t     fall_counter[NUM_LANES];
+    uint32_t     fall_counter[MAX_TILES];
     uint32_t     spawn_counter;
     int          next_col;
     int          anim_counter;

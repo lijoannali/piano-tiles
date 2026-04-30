@@ -5,10 +5,10 @@
 #include "framebuffer.h"
 #include "game.h"
 
-#define SW1 ((uint32_t) 0x1 << 24)  // PA24
-#define SW2 ((uint32_t) 0x1 << 25)  // PA25
-#define SW3 ((uint32_t) 0x1 << 26)  // PA26
-#define SW4 ((uint32_t) 0x1 << 27)  // PA27
+#define SW1 ((uint32_t) 0x1 << 23)  // PA24
+#define SW2 ((uint32_t) 0x1 << 24)  // PA25
+#define SW3 ((uint32_t) 0x1 << 25)  // PA26
+#define SW4 ((uint32_t) 0x1 << 26)  // PA27
 
 void InitButtonGPIO(void) {
     if (GPIOA->GPRCM.STAT & GPIO_STAT_RESETSTKY_MASK) {
@@ -25,10 +25,10 @@ void InitButtonGPIO(void) {
                          IOMUX_PINCM_PIPU_ENABLE   |
                          IOMUX_PINCM_PIPD_DISABLE;
 
-    IOMUX->SECCFG.PINCM[IOMUX_PINCM54] = cfg;  // PA24
-    IOMUX->SECCFG.PINCM[IOMUX_PINCM55] = cfg;  // PA25
-    IOMUX->SECCFG.PINCM[IOMUX_PINCM59] = cfg;  // PA26
-    IOMUX->SECCFG.PINCM[IOMUX_PINCM60] = cfg;  // PA27
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM53] = cfg;  // PA24
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM54] = cfg;  // PA25
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM55] = cfg;  // PA26
+    IOMUX->SECCFG.PINCM[IOMUX_PINCM59] = cfg;  // PA27
     delay_cycles(POWER_STARTUP_DELAY);
 }
 
@@ -45,7 +45,7 @@ int main(void) {
     game_state_t state = InitGame();
 
     while (1) {
-        if (timer_wakeup) {
+        if (          timer_wakeup) {
             timer_wakeup = false;
             uint32_t input = GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4);
             state = UpdateGame(state, input);
@@ -54,3 +54,4 @@ int main(void) {
         __WFI();
     }
 }
+
