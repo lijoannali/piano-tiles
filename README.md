@@ -14,4 +14,4 @@ A WS2812B LED array game written with "bare metal" C for the MSPM0G3507 for your
 - Ivana Zak
   
 # Project Report
-[Link to Report(/report.pdf)
+[Link to Report](/report.pdf)
